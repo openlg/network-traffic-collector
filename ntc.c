@@ -1,0 +1,335 @@
+//
+// Network traffic collection
+// Created by lg on 5/22/24.
+//
+
+#include <stdio.h>
+#include <pcap.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <netinet/if_ether.h>
+#include <netinet/ip.h>
+#include <netinet/ip6.h>
+#include <arpa/inet.h>
+#include <locale.h>
+#include <sys/signal.h>
+#include <signal.h>
+#include <pthread.h>
+#include "options.h"
+#include "ntc.h"
+#include "filter.h"
+#include "log.h"
+#include <curl/curl.h>
+#include <unistd.h>
+#include <stdlib.h>
+
+/* ethernet address of interface. */
+int have_hw_addr = 0;
+unsigned char if_hw_addr[6];
+
+/* IP address of interface */
+int have_ip_addr = 0;
+int have_ip6_addr = 0;
+struct in_addr if_ip_addr;
+struct in6_addr if_ip6_addr;
+
+extern options_t options;
+pthread_mutex_t tick_mutex;
+volatile ThreadStatus thread_status;
+
+pcap_t* pd; /* pcap descriptor */
+struct bpf_program pcap_filter;
+
+sig_atomic_t sigAtomic;
+
+Metrics metrics;
+
+#define CAPTURE_LENGTH 256
+
+void ntc_init() {
+    curl_global_init( CURL_GLOBAL_ALL );
+    memset(&metrics, 0, sizeof metrics);
+}
+
+void packet_init() {
+    char error_buf[PCAP_ERRBUF_SIZE];
+    int result;
+
+    result = get_addrs_ioctl(options.interface, if_hw_addr,
+                             &if_ip_addr, &if_ip6_addr);
+
+    if (result < 0) {
+        exit(EXIT_FAILURE);
+    }
+    have_hw_addr = result & 0x01;
+    have_ip_addr = result & 0x02;
+    have_ip6_addr = result & 0x04;
+
+    if(have_ip_addr) {
+        log_info("IP address is: %s", inet_ntoa(if_ip_addr));
+    }
+    if(have_ip6_addr) {
+        char ip6str[INET6_ADDRSTRLEN];
+        ip6str[0] = '\0';
+        inet_ntop(AF_INET6, &if_ip6_addr, ip6str, sizeof(ip6str));
+        log_info("IPv6 address is: %s", ip6str);
+    }
+
+    if(have_hw_addr) {
+        char mac[3 * sizeof(if_hw_addr) + 1];
+        for (int i = 0; i < sizeof(if_hw_addr); ++i) {
+            sprintf(mac + 3 * i, "%c%02x", i ? ':' : ' ', (unsigned int)if_hw_addr[i]);
+        }
+        log_info("MAC address is: %s", mac);
+    }
+
+    pd = pcap_open_live(options.interface, CAPTURE_LENGTH, options.promiscuous, 1000, error_buf);
+
+    if(pd == NULL) {
+        log_error("pcap_open_live(%s): %s", options.interface, error_buf);
+        exit(EXIT_FAILURE);
+    }
+
+}
+
+static void handle_packet(u_char *args, const struct pcap_pkthdr* pkthdr, const u_char *packet) {
+    int ether_type;
+
+    char src_ip[INET6_ADDRSTRLEN];
+    char dst_ip[INET6_ADDRSTRLEN];
+
+    struct ether_header *eth_header = (struct ether_header *) packet;
+    ether_type = ntohs(eth_header->ether_type);
+
+    int dir = -1;
+    if (ether_type == ETHERTYPE_IP || ether_type == ETHERTYPE_IPV6) {
+        if(have_hw_addr && memcmp(eth_header->ether_shost, if_hw_addr, 6) == 0 ) {
+            /* packet leaving this i/f */
+            dir = 1;
+        } else if (have_hw_addr && memcmp(eth_header->ether_dhost, if_hw_addr, 6) == 0 ) {
+            /* packet entering this i/f */
+            dir = 0;
+        } else if (memcmp("\xFF\xFF\xFF\xFF\xFF\xFF", eth_header->ether_dhost, 6) == 0) {
+            /* broadcast packet, count as incoming */
+            dir = 0;
+        }
+    } else {
+        return; // ignore other ether type packet
+    }
+
+    //log_info("Ethernet source: %s", ether_ntoa((struct ether_addr *)eth_header->ether_shost));
+    //log_info("Ethernet destination: %s", ether_ntoa((struct ether_addr *)eth_header->ether_dhost));
+
+    if (ether_type == ETHERTYPE_IP) {
+        const struct ip *ip_header = (struct ip *)(packet + sizeof(struct ether_header));
+        inet_ntop(AF_INET, &(ip_header->ip_src), src_ip, INET_ADDRSTRLEN);
+        inet_ntop(AF_INET, &(ip_header->ip_dst), dst_ip, INET_ADDRSTRLEN);
+    } else {
+        const struct ip6_hdr *ip6_header = (struct ip6_hdr *)(packet + sizeof(struct ether_header));
+        inet_ntop(AF_INET6, &(ip6_header->ip6_src), src_ip, INET6_ADDRSTRLEN);
+        inet_ntop(AF_INET6, &(ip6_header->ip6_dst), dst_ip, INET6_ADDRSTRLEN);
+
+        if( IN6_IS_ADDR_LINKLOCAL(&ip6_header->ip6_dst)
+                || IN6_IS_ADDR_LINKLOCAL(&ip6_header->ip6_src) ) {
+            return;
+        }
+    }
+    if (filter_by_addr(dir == 1 ? dst_ip : src_ip)) {
+        return;
+    }
+    //log_info("%s => %s, ", src_ip, dst_ip);
+    //log_info("dir: %d, type:%x, capture:%d, total:%d\n", dir, ether_type, pkthdr->caplen, pkthdr->len);
+    pthread_mutex_lock(&tick_mutex);
+    if (dir == 0) {
+        metrics.total_recv += pkthdr->len;
+    } else {
+        metrics.total_sent += pkthdr->len;
+    }
+    metrics.ts = time(NULL);
+    pthread_mutex_unlock(&tick_mutex);
+}
+
+/* packet_loop:
+ * Worker function for packet capture thread. */
+void packet_loop(void* ptr) {
+    pcap_loop(pd,-1,(pcap_handler)handle_packet,NULL);
+    thread_status = THREAD_FINISHED;
+}
+
+size_t read_response_data(void *contents, size_t size, size_t nmemb, void *userp) {
+    size_t realsize = size * nmemb;
+    Response *response = (Response *)userp;
+
+    char *ptr = realloc(response->data, response->size + realsize +1);
+    if(ptr == NULL) {
+        log_warn("not enough memory (realloc returned NULL)");
+        return 0;
+    }
+    response->data = ptr;
+    memcpy(&(response->data[response->size]), contents, realsize);
+    response->size += realsize;
+    response->data[response->size] = 0;
+    return realsize;
+}
+
+size_t read_response_header(char *buffer, size_t size, size_t nitems, void *userdata) {
+    struct ResponseHeaders *headers = (struct ResponseHeaders *)userdata;
+    size_t length = size * nitems;
+
+    if (strncasecmp(buffer, "HTTP", 4) == 0) {
+        sscanf(buffer, "%s %d %s[^\n]", headers->http_version, &headers->status_code, headers->status_text);
+    } else if(strncasecmp(buffer, "Content-Type:", 13) == 0) {
+        headers->content_type = strdup(buffer + 13);
+    } else if (strncasecmp(buffer, "Content-Length:", 15) == 0) {
+        headers->content_length = atol(buffer + 15);
+    }
+    return length;
+}
+
+void push_data_loop() {
+
+    CURL * curl = curl_easy_init ( ) ;
+
+    if (curl) {
+        CURLcode res;
+        Response response;
+        response.data = malloc(1);
+        response.size = 0;
+        char request_body[2048];
+
+        char hostname[256];
+        char *process_id = getenv("process_id");
+        char *version = getenv("version");
+        char mac[3 * sizeof(if_hw_addr) + 1];
+        char ip6str[INET6_ADDRSTRLEN];
+        struct curl_slist *headers = NULL;
+        time_t start = time(NULL);
+
+        for (int i = 0; i < sizeof(if_hw_addr); ++i) {
+            sprintf(mac + 3 * i, "%c%02x", i ? ':' : ' ', (unsigned int)if_hw_addr[i]);
+        }
+        memmove(mac, mac + 1, strlen(mac));
+
+        ip6str[0] = '\0';
+        inet_ntop(AF_INET6, &if_ip6_addr, ip6str, sizeof(ip6str));
+
+
+        headers = curl_slist_append(headers, "Content-Type: application/json");
+
+        while (thread_status != THREAD_FINISHED && sigAtomic == 0) {
+            sleep(options.interval);
+
+            char send_str[20];
+            char recv_str[20];
+            char datetime[80];
+            time_t now = time(NULL);
+            time_t end = metrics.ts;
+            double long send_bytes = metrics.total_sent;
+            double long recv_bytes = metrics.total_recv;
+
+            readable_size(send_bytes, send_str);
+            readable_size(recv_bytes, recv_str);
+
+            strftime(datetime, sizeof(datetime), "%Y-%m-%d %H:%M:%S", localtime(&now));
+
+            if (gethostname(hostname, sizeof(hostname)) != 0) {
+                strcpy(hostname, getenv("HOSTNAME"));
+            }
+            sprintf(request_body, "{"
+                                  "\"interface\": \"%s\", "
+                                  "\"hostname\": \"%s\", "
+                                  "\"process_id\": \"%s\", "
+                                  "\"version\": \"%s\", "
+                                  "\"mac\": \"%s\", "
+                                  "\"ip\": \"%s\", "
+                                  "\"ipv6\": \"%s\", "
+                                  "\"sent\": %Lf, "
+                                  "\"recv\": %Lf, "
+                                  "\"start\": %ld, "
+                                  "\"end\": %ld, "
+                                  "}",
+                    options.interface, hostname, process_id, version, mac, inet_ntoa(if_ip_addr),
+                    ip6str, send_bytes, recv_bytes, start, end);
+
+            log_info("Total send %s, total receive %s, send data %s", send_str, recv_str, request_body);
+
+            curl_easy_setopt(curl, CURLOPT_URL, options.url);
+            curl_easy_setopt(curl, CURLOPT_POST, 1L);
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, read_response_data);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+            curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, read_response_header);
+            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+            curl_easy_setopt(curl, CURLOPT_HEADERDATA, &response.headers);
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request_body);
+
+            res = curl_easy_perform( curl );
+            if (res != CURLE_OK) {
+                log_error("send failed: %s", curl_easy_strerror(res));
+            } else {
+                if (response.headers.status_code == 200) {
+                    log_info("send successful");
+                    pthread_mutex_lock(&tick_mutex);
+                    metrics.total_sent -= send_bytes;
+                    metrics.total_recv -= recv_bytes;
+                    start = end;
+                    pthread_mutex_unlock(&tick_mutex);
+                } else {
+                    log_error("send failed: %d %s\n", response.headers.status_code, response.data);
+                }
+            }
+            response.size = 0;
+        }
+        curl_easy_cleanup( curl );
+    }
+}
+
+static void finish(int sig) {
+    sigAtomic = sig;
+    if (pd != NULL) {
+        pcap_breakloop(pd);
+    }
+}
+
+void ntc_destroy() {
+    if (pd != NULL) {
+        pcap_close(pd);
+    }
+    curl_global_cleanup();
+}
+
+int main(int argc, char **argv) {
+
+    setlocale(LC_ALL, "");
+
+    options_set_defaults();
+
+    options_read_args(argc, argv);
+
+    if ( options_check() != 0) {
+        return 1;
+    }
+
+    struct sigaction sa = {};
+    sa.sa_handler = finish;
+    sigaction(SIGINT, &sa, NULL);
+
+    ntc_init();
+
+    packet_init();
+
+    pthread_t thread;
+    pthread_mutex_init(&tick_mutex, NULL);
+    int result = pthread_create(&thread, NULL, (void*)&packet_loop, NULL);
+    if (result != 0) {
+        log_error("Error creating thread");
+        return 1;
+    }
+    thread_status = THREAD_RUNNING;
+
+    push_data_loop();
+
+    pthread_cancel(thread);
+
+    ntc_destroy();
+	return 0;
+}
