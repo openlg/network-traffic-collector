@@ -64,3 +64,22 @@ long parse_time(const char *time_str) {
     free(num_str); // 释放缓冲区
     return total_seconds;
 }
+
+char* generate_random_string(int length) {
+    if (length <= 0) return NULL;
+
+    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const int charset_size = sizeof(charset) - 1;
+
+    srand(time(NULL));
+
+    char* random_string = (char*)malloc((length + 1) * sizeof(char));
+    if (!random_string) return NULL;
+
+    for (int i = 0; i < length; ++i) {
+        random_string[i] = charset[rand() % charset_size];
+    }
+    random_string[length] = '\0';
+
+    return random_string;
+}

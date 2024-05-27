@@ -212,7 +212,10 @@ void push_data_loop() {
 
         ip6str[0] = '\0';
         inet_ntop(AF_INET6, &if_ip6_addr, ip6str, sizeof(ip6str));
-
+        if (process_id == NULL)
+            process_id = "";
+        if (version == NULL)
+            version = "";
 
         headers = curl_slist_append(headers, "Content-Type: application/json");
 
@@ -226,6 +229,7 @@ void push_data_loop() {
             time_t end = metrics.ts;
             double long send_bytes = metrics.total_sent;
             double long recv_bytes = metrics.total_recv;
+            int enable_sign = options.accessKey != NULL && options.secretKey != NULL;
 
             readable_size(send_bytes, send_str);
             readable_size(recv_bytes, recv_str);
@@ -246,14 +250,30 @@ void push_data_loop() {
                                   "\"sent\": %Lf, "
                                   "\"recv\": %Lf, "
                                   "\"start\": %ld, "
-                                  "\"end\": %ld, "
+                                  "\"end\": %ld "
                                   "}",
                     options.interface, hostname, process_id, version, mac, inet_ntoa(if_ip_addr),
                     ip6str, send_bytes, recv_bytes, start, end);
 
             log_info("Total send %s, total receive %s, send data %s", send_str, recv_str, request_body);
 
-            curl_easy_setopt(curl, CURLOPT_URL, options.url);
+            if (enable_sign) {
+                char *nonce = generate_random_string(10);
+                char ts[14];
+                sprintf(ts, "%ld000", time(NULL));
+                char *sign_str = sign(nonce, "1.0",
+                                      options.accessKey, options.secretKey, ts, request_body);
+                char url[strlen(options.url) + strlen(options.accessKey) + 71];
+                sign_str = curl_easy_escape(curl, sign_str, 0);
+
+                sprintf(url, "%s?nonce=%s&ts=%s&accessKey=%s&sign=%s&signVersion=1.0",
+                        options.url, nonce, ts, options.accessKey, sign_str);
+                curl_easy_setopt(curl, CURLOPT_URL, url);
+                log_info("Send to %s", url);
+            } else {
+                curl_easy_setopt(curl, CURLOPT_URL, options.url);
+                log_info("Send to %s", options.url);
+            }
             curl_easy_setopt(curl, CURLOPT_POST, 1L);
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, read_response_data);
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
@@ -264,17 +284,17 @@ void push_data_loop() {
 
             res = curl_easy_perform( curl );
             if (res != CURLE_OK) {
-                log_error("send failed: %s", curl_easy_strerror(res));
+                log_error("Send failed: %s", curl_easy_strerror(res));
             } else {
                 if (response.headers.status_code == 200) {
-                    log_info("send successful");
+                    log_info("Send successful: %s", response.data);
                     pthread_mutex_lock(&tick_mutex);
                     metrics.total_sent -= send_bytes;
                     metrics.total_recv -= recv_bytes;
                     start = end;
                     pthread_mutex_unlock(&tick_mutex);
                 } else {
-                    log_error("send failed: %d %s\n", response.headers.status_code, response.data);
+                    log_error("Send failed: %d %s\n", response.headers.status_code, response.data);
                 }
             }
             response.size = 0;

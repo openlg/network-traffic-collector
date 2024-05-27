@@ -15,6 +15,10 @@ typedef struct {
     int promiscuous_but_choosy;
 
     char *filter;
+
+    char *accessKey;
+    char *secretKey;
+
 } options_t;
 
 void options_set_defaults() ;

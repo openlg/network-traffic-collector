@@ -71,6 +71,10 @@ void options_set_defaults() {
         options.interval = 60;
     if (options.url == NULL)
         options.url = "http://127.0.0.1:3000/health";
+    if (options.accessKey == NULL)
+        options.accessKey = getenv("accessKey");
+    if (options.secretKey == NULL)
+        options.secretKey = getenv("secretKey");
 
 #ifdef NEED_PROMISCUOUS_FOR_OUTGOING
     options.promiscuous = 1;
