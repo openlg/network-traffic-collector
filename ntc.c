@@ -299,6 +299,10 @@ void ntc_destroy() {
 
 int main(int argc, char **argv) {
 
+    setbuf(stdout, NULL);
+    setbuf(stderr, NULL);
+    printf("test output message\n");
+
     setlocale(LC_ALL, "");
 
     options_set_defaults();
