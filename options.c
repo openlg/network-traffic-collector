@@ -98,6 +98,8 @@ void usage(FILE *fp) {
 "   -I 1m               push data every minute, format is [1h][1m][20s], default is 1m\n"
 "   -f filter           Specify a list of IP addresses that need to be filtered out. Use commas to \n"
 "                       separate multiple IP addresses, such as '192.168.1.66,34.150.58.185'\n"
+"   -A accessKey        Specify the access key used for signing, default get from env 'accessKey'\n"
+"   -S secretKey        Specify the secret key used for signing, default get from env 'secretKey'\n"
 "\n"
 "ntc, version v1.0\n"
 "copyright (c) 2024 Leon Li <leon@tapdata.io>\n"
@@ -108,7 +110,7 @@ void options_read_args(int argc, char **argv) {
     int opt;
 
     opterr = 0;
-    char opt_str[] = "hi:s:I:f:";
+    char opt_str[] = "hi:s:I:f:A:S:";
     while ((opt = getopt(argc, argv, opt_str)) != -1) {
         switch (opt) {
             case 'h':
@@ -125,6 +127,12 @@ void options_read_args(int argc, char **argv) {
                 break;
             case 'f':
                 options.filter = optarg;
+                break;
+            case 'A':
+                options.accessKey = optarg;
+                break;
+            case 'S':
+                options.secretKey = optarg;
                 break;
             case '?':
                 fprintf(stderr, "ntc: unknown option -%c\n", optopt);
