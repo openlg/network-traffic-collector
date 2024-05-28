@@ -240,15 +240,17 @@ void push_data_loop() {
                 strcpy(hostname, getenv("HOSTNAME"));
             }
             sprintf(request_body, "{"
-                                  "\"interface\": \"%s\", "
-                                  "\"hostname\": \"%s\", "
-                                  "\"process_id\": \"%s\", "
-                                  "\"version\": \"%s\", "
-                                  "\"mac\": \"%s\", "
-                                  "\"ip\": \"%s\", "
-                                  "\"ipv6\": \"%s\", "
-                                  "\"sent\": %Lf, "
-                                  "\"recv\": %Lf, "
+                                  "\"metadata\":{"
+                                      "\"interface\": \"%s\", "
+                                      "\"hostname\": \"%s\", "
+                                      "\"process_id\": \"%s\", "
+                                      "\"version\": \"%s\", "
+                                      "\"mac\": \"%s\", "
+                                      "\"ip\": \"%s\", "
+                                      "\"ipv6\": \"%s\" "
+                                  "},"
+                                  "\"transmit\": %Lf, "
+                                  "\"received\": %Lf, "
                                   "\"start\": %ld, "
                                   "\"end\": %ld "
                                   "}",
@@ -286,8 +288,8 @@ void push_data_loop() {
             if (res != CURLE_OK) {
                 log_error("Send failed: %s", curl_easy_strerror(res));
             } else {
-                if (response.headers.status_code == 200) {
-                    log_info("Send successful: %s", response.data);
+                if (response.headers.status_code >= 200 && response.headers.status_code < 300) {
+                    log_info("Send successful: %d %s", response.headers.status_code, response.data);
                     pthread_mutex_lock(&tick_mutex);
                     metrics.total_sent -= send_bytes;
                     metrics.total_recv -= recv_bytes;
@@ -321,7 +323,6 @@ int main(int argc, char **argv) {
 
     setbuf(stdout, NULL);
     setbuf(stderr, NULL);
-    printf("test output message\n");
 
     setlocale(LC_ALL, "");
 
