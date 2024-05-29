@@ -14,6 +14,7 @@ void log_(char level,const char *format, va_list args) {
     printf("[%s] [%c] ", datetime, level);
     vprintf(format, args);
     printf("\n");
+    fflush(stdout);
 }
 void log_debug(const char *msg, ...){
     va_list args;
