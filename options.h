@@ -19,6 +19,8 @@ typedef struct {
     char *accessKey;
     char *secretKey;
 
+    int debug;
+
 } options_t;
 
 void options_set_defaults() ;

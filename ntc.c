@@ -117,9 +117,6 @@ static void handle_packet(u_char *args, const struct pcap_pkthdr* pkthdr, const 
         return; // ignore other ether type packet
     }
 
-    //log_info("Ethernet source: %s", ether_ntoa((struct ether_addr *)eth_header->ether_shost));
-    //log_info("Ethernet destination: %s", ether_ntoa((struct ether_addr *)eth_header->ether_dhost));
-
     if (ether_type == ETHERTYPE_IP) {
         const struct ip *ip_header = (struct ip *)(packet + sizeof(struct ether_header));
         inet_ntop(AF_INET, &(ip_header->ip_src), src_ip, INET_ADDRSTRLEN);
@@ -134,11 +131,18 @@ static void handle_packet(u_char *args, const struct pcap_pkthdr* pkthdr, const 
             return;
         }
     }
+
+    if (options.debug) {
+        log_debug("Ethernet src: %s, ip: %s", ether_ntoa((struct ether_addr *)eth_header->ether_shost), src_ip);
+        log_debug("Ethernet dest: %s, ip: %s", ether_ntoa((struct ether_addr *)eth_header->ether_dhost), dst_ip);
+    }
+
     if (filter_by_addr(dir == 1 ? dst_ip : src_ip)) {
+        if (options.debug) {
+            log_debug("Filter matches the address %s and ignores the packet.\n", dir == 1 ? dst_ip : src_ip);
+        }
         return;
     }
-    //log_info("%s => %s, ", src_ip, dst_ip);
-    //log_info("dir: %d, type:%x, capture:%d, total:%d\n", dir, ether_type, pkthdr->caplen, pkthdr->len);
     pthread_mutex_lock(&tick_mutex);
     if (dir == 0) {
         metrics.total_recv += pkthdr->len;
@@ -147,6 +151,11 @@ static void handle_packet(u_char *args, const struct pcap_pkthdr* pkthdr, const 
     }
     metrics.ts = time(NULL);
     pthread_mutex_unlock(&tick_mutex);
+
+    if (options.debug) {
+        log_debug("%s => %s, dir: %d, type:%x, capture:%d, packet total:%d, total transmit:%Lf, total received: %Lf\n",
+                  src_ip, dst_ip, dir, ether_type, pkthdr->caplen, pkthdr->len, metrics.total_sent, metrics.total_recv);
+    }
 }
 
 /* packet_loop:

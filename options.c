@@ -75,6 +75,7 @@ void options_set_defaults() {
         options.accessKey = getenv("accessKey");
     if (options.secretKey == NULL)
         options.secretKey = getenv("secretKey");
+    options.debug = 0;
 
 #ifdef NEED_PROMISCUOUS_FOR_OUTGOING
     options.promiscuous = 1;
@@ -100,6 +101,7 @@ void usage(FILE *fp) {
 "                       separate multiple IP addresses, such as '192.168.1.66,34.150.58.185'\n"
 "   -A accessKey        Specify the access key used for signing, default get from env 'accessKey'\n"
 "   -S secretKey        Specify the secret key used for signing, default get from env 'secretKey'\n"
+"   -d                  Output debug log, This will output all captured packet header information, use with caution\n"
 "\n"
 "ntc, version v1.0\n"
 "copyright (c) 2024 Leon Li <leon@tapdata.io>\n"
@@ -110,7 +112,7 @@ void options_read_args(int argc, char **argv) {
     int opt;
 
     opterr = 0;
-    char opt_str[] = "hi:s:I:f:A:S:";
+    char opt_str[] = "hi:s:I:f:A:S:d";
     while ((opt = getopt(argc, argv, opt_str)) != -1) {
         switch (opt) {
             case 'h':
@@ -133,6 +135,9 @@ void options_read_args(int argc, char **argv) {
                 break;
             case 'S':
                 options.secretKey = optarg;
+                break;
+            case 'd':
+                options.debug = 1;
                 break;
             case '?':
                 fprintf(stderr, "ntc: unknown option -%c\n", optopt);

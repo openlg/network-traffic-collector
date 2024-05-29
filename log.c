@@ -15,6 +15,12 @@ void log_(char level,const char *format, va_list args) {
     vprintf(format, args);
     printf("\n");
 }
+void log_debug(const char *msg, ...){
+    va_list args;
+    va_start(args, msg);
+    log_('D', msg, args);
+    va_end(args);
+}
 void log_info(const char* msg, ...) {
     va_list args;
     va_start(args, msg);
