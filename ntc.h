@@ -6,6 +6,7 @@
 #ifndef NETWORK_TRAFFIC_NTC_H
 #define NETWORK_TRAFFIC_NTC_H
 
+#include <time.h>
 #define HISTORY_LENGTH  20
 
 typedef enum {

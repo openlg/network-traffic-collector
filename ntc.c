@@ -49,6 +49,9 @@ Metrics metrics;
 void ntc_init() {
     curl_global_init( CURL_GLOBAL_ALL );
     memset(&metrics, 0, sizeof metrics);
+
+    int count = init_filter(options.filter);
+    log_info("Initialized %d regular expressions to filter packet.", count);
 }
 
 void packet_init() {
@@ -166,7 +169,7 @@ static void handle_packet(u_char *args, const struct pcap_pkthdr* pkthdr, const 
     pthread_mutex_unlock(&tick_mutex);
 
     if (options.debug) {
-        log_debug("%s => %s, dir: %d, type:%x, capture:%d, packet total:%d, total transmit:%Lf, total received: %Lf\n",
+        log_debug("%s => %s, dir: %d, type:%x, capture:%d, packet total:%d, total transmit: %Lf, total received: %Lf\n",
                   src_ip, dst_ip, dir, ether_type, pkthdr->caplen, pkthdr->len, metrics.total_sent, metrics.total_recv);
     }
 }
@@ -339,6 +342,8 @@ void ntc_destroy() {
         pcap_close(pd);
     }
     curl_global_cleanup();
+
+    destroy_filter();
 }
 
 int main(int argc, char **argv) {
