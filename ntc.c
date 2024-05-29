@@ -7,9 +7,9 @@
 #include <pcap.h>
 #include <string.h>
 #include <netinet/in.h>
-#include <netinet/if_ether.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
+#include <net/ethernet.h>
 #include <arpa/inet.h>
 #include <locale.h>
 #include <sys/signal.h>
@@ -92,6 +92,16 @@ void packet_init() {
 
 }
 
+void ether_addr_to_string(struct ether_addr *addr, char *str) {
+    sprintf(str, "%02x:%02x:%02x:%02x:%02x:%02x",
+            addr->ether_addr_octet[0],
+            addr->ether_addr_octet[1],
+            addr->ether_addr_octet[2],
+            addr->ether_addr_octet[3],
+            addr->ether_addr_octet[4],
+            addr->ether_addr_octet[5]);
+}
+
 static void handle_packet(u_char *args, const struct pcap_pkthdr* pkthdr, const u_char *packet) {
     int ether_type;
 
@@ -133,8 +143,11 @@ static void handle_packet(u_char *args, const struct pcap_pkthdr* pkthdr, const 
     }
 
     if (options.debug) {
-        log_debug("Ethernet src: %s, ip: %s", ether_ntoa((struct ether_addr *)eth_header->ether_shost), src_ip);
-        log_debug("Ethernet dest: %s, ip: %s", ether_ntoa((struct ether_addr *)eth_header->ether_dhost), dst_ip);
+        char src_ether[40];
+        char dst_ether[40];
+        ether_addr_to_string((struct ether_addr *)eth_header->ether_shost, src_ether);
+        ether_addr_to_string((struct ether_addr *)eth_header->ether_dhost, dst_ether);
+        log_debug("%s(%s) => %s(%s)", src_ether, src_ip, dst_ether, dst_ip);
     }
 
     if (filter_by_addr(dir == 1 ? dst_ip : src_ip)) {
