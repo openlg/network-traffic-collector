@@ -54,6 +54,7 @@ int init_filter(const char *filter) {
 
 void destroy_filter() {
     free(regex_array);
+	regex_array = NULL;
 }
 
 /**

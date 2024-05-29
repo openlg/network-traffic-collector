@@ -40,6 +40,7 @@ void test_regex_match() {
     assert(match_regex("192\\.168\\.*", "192.168.1.1") == 1);
     assert(match_regex("192\\.168\\.*", "192.168.1.250") == 1);
     assert(match_regex("192\\.168\\.*", "192.164.1.250") == 0);
+    assert(match_regex("^2.3.*$", "2.3.4.6") == 1);
 }
 
 void test_filter() {
@@ -57,7 +58,7 @@ void test_filter() {
     destroy_filter();
     assert(filter_by_addr("192.168.1.1") == 0);
     assert(filter_by_addr("192.168.223.256") == 0);
-    assert(filter_by_addr("2.3.126.123") == 1);
+    assert(filter_by_addr("2.3.126.123") == 0);
 
     count = init_filter(".*");
     assert(count == 1);
