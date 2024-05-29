@@ -6,6 +6,7 @@
 #include <printf.h>
 #include <regex.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 regex_t *regex_array;
 int regex_count = 0;
