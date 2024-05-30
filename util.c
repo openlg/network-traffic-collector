@@ -66,7 +66,7 @@ long parse_time(const char *time_str) {
     return total_seconds;
 }
 
-void generate_random_string(int length, char* random_string) {
+void generate_random_string(int length, char *random_string) {
     if (length <= 0) return;
 
     const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -74,14 +74,7 @@ void generate_random_string(int length, char* random_string) {
 
     srand(time(NULL));
 
-    random_string = realloc(random_string, (length + 1) * sizeof(char));
-    if (random_string == NULL) {
-        log_warn("Realloc mem failed");
-        return;
-    }
-
     for (int i = 0; i < length; ++i) {
         random_string[i] = charset[rand() % charset_size];
     }
-    random_string[length] = '\0';
 }
