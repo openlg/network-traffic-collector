@@ -231,7 +231,7 @@ void push_data_loop() {
         time_t start = time(NULL);
 
         int enable_sign = options.accessKey != NULL && options.secretKey != NULL;
-        char *nonce = (char *)malloc(10 * sizeof(char));
+        char *nonce = (char *)malloc(11 * sizeof(char));
         char *sign_str = (char *)malloc(1);
 
         for (int i = 0; i < sizeof(if_hw_addr); ++i) {

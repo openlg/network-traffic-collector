@@ -77,4 +77,5 @@ void generate_random_string(int length, char *random_string) {
     for (int i = 0; i < length; ++i) {
         random_string[i] = charset[rand() % charset_size];
     }
+    random_string[length + 1] = '\0';
 }
