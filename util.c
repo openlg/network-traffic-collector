@@ -79,3 +79,7 @@ void generate_random_string(int length, char *random_string) {
     }
 	random_string[length] = '\0';
 }
+
+int contains(const char *haystack, const char *needle) {
+	return strstr(haystack, needle) != NULL;
+}

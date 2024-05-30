@@ -35,12 +35,13 @@ typedef struct {
     struct ResponseHeaders headers;
 } Response;
 
-char *xstrdup(const char *s);
 int get_addrs_ioctl(char *interface, unsigned char if_hw_addr[], struct in_addr *if_ip_addr, struct in6_addr *if_ip6_addr);
+char *xstrdup(const char *s);
 void readable_size(double long bytes, char *result);
 long parse_time(const char *time_str);
 
 void generate_random_string(int length, char* random_string);
+int contains(const char *haystack, const char *needle);
 void sign(char *nonce, char *signVersion, char *accessKey, char *secretKey, char *ts, char *body, char *sign_str) ;
 
 #endif //NETWORK_TRAFFIC_NTC_H
