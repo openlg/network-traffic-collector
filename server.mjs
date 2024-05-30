@@ -27,10 +27,10 @@ const server = createServer((req, res) => {
 
     if (counter%3 === 0) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end('{"code": "failed"}');
+        res.end('{"code":"failed"}');
     } else {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end('{"code": "ok"}');
+        res.end('{"code":"ok"}');
     }
 
 });
