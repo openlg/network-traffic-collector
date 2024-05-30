@@ -29,7 +29,7 @@ void base64_encode(unsigned char input[EVP_MAX_MD_SIZE], int length, char *base6
     BIO_get_mem_ptr(bio, &bufferPtr);
     BIO_set_close(bio, BIO_NOCLOSE);
 
-    base64text = realloc(base64text, (bufferPtr->length + 1) * sizeof(char));
+    //base64text = realloc(base64text, (bufferPtr->length + 1) * sizeof(char));
     memcpy(base64text, bufferPtr->data, bufferPtr->length);
     base64text[bufferPtr->length] = '\0';
 

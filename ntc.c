@@ -232,7 +232,7 @@ void push_data_loop() {
 
         int enable_sign = options.accessKey != NULL && options.secretKey != NULL;
         char *nonce = (char *)malloc(11 * sizeof(char));
-        char *sign_str = (char *)malloc(1);
+        char sign_str[100];
 
         for (int i = 0; i < sizeof(if_hw_addr); ++i) {
             sprintf(mac + 3 * i, "%c%02x", i ? ':' : ' ', (unsigned int)if_hw_addr[i]);
@@ -297,10 +297,9 @@ void push_data_loop() {
                 sprintf(ts, "%ld000", time(NULL));
                 sign(nonce, "1.0", options.accessKey, options.secretKey, ts, request_body, sign_str);
                 char url[strlen(options.url) + strlen(options.accessKey) + 71];
-                sign_str = curl_easy_escape(curl, sign_str, 0);
-
+                char *sign_str_ = curl_easy_escape(curl, sign_str, 0);
                 sprintf(url, "%s?nonce=%s&ts=%s&accessKey=%s&sign=%s&signVersion=1.0",
-                        options.url, nonce, ts, options.accessKey, sign_str);
+                        options.url, nonce, ts, options.accessKey, sign_str_);
                 curl_easy_setopt(curl, CURLOPT_URL, url);
                 log_info("Send to %s", url);
             } else {
