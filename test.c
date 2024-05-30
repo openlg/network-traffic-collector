@@ -60,7 +60,7 @@ void test_filter() {
     assert(filter_by_addr("192.168.223.256") == 0);
     assert(filter_by_addr("2.3.126.123") == 0);
 
-    count = init_filter(".*");
+    count = init_filter("*");
     assert(count == 1);
     assert(filter_by_addr("192.168.1.1") == 1);
     destroy_filter();

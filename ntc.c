@@ -51,7 +51,7 @@ void ntc_init() {
     memset(&metrics, 0, sizeof metrics);
 
     int count = init_filter(options.filter);
-    log_info("Initialized %d regular expressions to filter packet.", count);
+    log_info("Compiled %d regular expressions to filter packet.", count);
 }
 
 void packet_init() {
@@ -230,6 +230,10 @@ void push_data_loop() {
         struct curl_slist *headers = NULL;
         time_t start = time(NULL);
 
+        int enable_sign = options.accessKey != NULL && options.secretKey != NULL;
+        char *nonce = (char *)malloc(1);
+        char *sign_str = (char *)malloc(1);
+
         for (int i = 0; i < sizeof(if_hw_addr); ++i) {
             sprintf(mac + 3 * i, "%c%02x", i ? ':' : ' ', (unsigned int)if_hw_addr[i]);
         }
@@ -244,17 +248,20 @@ void push_data_loop() {
 
         headers = curl_slist_append(headers, "Content-Type: application/json");
 
+        char send_str[20];
+        char recv_str[20];
+        char datetime[80];
+        time_t now;
+        time_t end;
+        double long send_bytes;
+        double long recv_bytes;
+
         while (thread_status != THREAD_FINISHED && sigAtomic == 0) {
             sleep(options.interval);
-
-            char send_str[20];
-            char recv_str[20];
-            char datetime[80];
-            time_t now = time(NULL);
-            time_t end = metrics.ts;
-            double long send_bytes = metrics.total_sent;
-            double long recv_bytes = metrics.total_recv;
-            int enable_sign = options.accessKey != NULL && options.secretKey != NULL;
+            now = time(NULL);
+            end = metrics.ts;
+            send_bytes = metrics.total_sent;
+            recv_bytes = metrics.total_recv;
 
             readable_size(send_bytes, send_str);
             readable_size(recv_bytes, recv_str);
@@ -285,11 +292,10 @@ void push_data_loop() {
             log_info("Total send %s, total receive %s, send data %s", send_str, recv_str, request_body);
 
             if (enable_sign) {
-                char *nonce = generate_random_string(10);
+                generate_random_string(10, nonce);
                 char ts[14];
                 sprintf(ts, "%ld000", time(NULL));
-                char *sign_str = sign(nonce, "1.0",
-                                      options.accessKey, options.secretKey, ts, request_body);
+                sign(nonce, "1.0", options.accessKey, options.secretKey, ts, request_body, sign_str);
                 char url[strlen(options.url) + strlen(options.accessKey) + 71];
                 sign_str = curl_easy_escape(curl, sign_str, 0);
 
@@ -379,6 +385,7 @@ int main(int argc, char **argv) {
     thread_status = THREAD_RUNNING;
 
     push_data_loop();
+    //pthread_join(thread, NULL);
 
     pthread_cancel(thread);
 

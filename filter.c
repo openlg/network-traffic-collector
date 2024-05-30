@@ -4,12 +4,11 @@
 
 #include <string.h>
 #include <printf.h>
-#include <regex.h>
 #include <stdlib.h>
-#include <stdio.h>
+#include "log.h"
 
-regex_t *regex_array;
-int regex_count = 0;
+char **pattern_array = NULL;
+int pattern_count = 0;
 
 int init_filter(const char *filter) {
     if (filter != NULL) {
@@ -18,8 +17,6 @@ int init_filter(const char *filter) {
         strncpy(filter_copy, filter, total_len);
         filter_copy[total_len] = '\0';
 
-        int pattern_count = 0;
-
         const char delim = ',';
         for (int i = 0; i < total_len; ++i) {
             if (filter_copy[i] == delim) {
@@ -27,34 +24,59 @@ int init_filter(const char *filter) {
             }
         }
 
-        //regex_t regex_array[pattern_count];
-        regex_array = malloc(sizeof(regex_t) * pattern_count);
-        if (regex_array == NULL) {
-            printf("Memory allocation failed");
-            exit(EXIT_FAILURE);
-        }
+        pattern_array = malloc(pattern_count * sizeof(char *));
 
         char *token = strtok(filter_copy, ",");
         int i = 0;
         while (token != NULL) {
-            char regex_pattern[strlen(token) + 3];
-            snprintf(regex_pattern, sizeof(regex_pattern), "^%s$", token);
-            int reti = regcomp(&regex_array[i], regex_pattern, REG_EXTENDED);
-            if (reti) {
-                fprintf(stderr, "Could not compile regex: %s\n", regex_pattern);
-                exit(EXIT_FAILURE);
-            }
-            i++;
+            pattern_array[i] = strdup(token);
+            log_info("Match pattern: %s", pattern_array[i]);
             token = strtok(NULL, ",");
+            i++;
         }
-        regex_count = i;
+        pattern_count = i;
     }
-    return regex_count;
+    return pattern_count;
+}
+
+/**
+ * 匹配字符串，pattern 支持使用 * 字符匹配任意字符
+ * @param pattern
+ * @param str
+ * @return
+ */
+int match(char *pattern, char *str) {
+    const char *p = pattern;
+    const char *t = str;
+    const char *star = NULL;
+    const char *ss = str;
+
+    while (*t) {
+        if (*p == '?' || *p == *t) {
+            p++;
+            t++;
+        } else if (*p == '*') {
+            star = p++;
+            ss = t;
+        } else if (star) {
+            p = star + 1;
+            t = ++ss;
+        } else {
+            return 0;
+        }
+    }
+
+    while (*p == '*') {
+        p++;
+    }
+
+    return *p == '\0';
 }
 
 void destroy_filter() {
-    free(regex_array);
-	regex_array = NULL;
+    free(pattern_array);
+    pattern_array = NULL;
+    pattern_count = 0;
 }
 
 /**
@@ -64,16 +86,13 @@ void destroy_filter() {
  */
 int filter_by_addr(char *addr) {
 
-    if (regex_array == NULL)
+    if (pattern_array == NULL || pattern_count == 0)
         return 0;
 
-    for (int i = 0; i < regex_count; i++) {
-        int reti = regexec(&regex_array[i], addr, 0, NULL, 0);
-        if (!reti) {
+    for (int i = 0; i < pattern_count; i++) {
+        if (match(pattern_array[i], addr)) {
             return 1;
         }
     }
-    /*char *ret = strstr(options.filter, addr);
-    return ret == NULL ? 0 : 1;*/
     return 0;
 }

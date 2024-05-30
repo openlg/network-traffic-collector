@@ -39,7 +39,7 @@ int get_addrs_ioctl(char *interface, char if_hw_addr[], struct in_addr *if_ip_ad
 void readable_size(double long bytes, char *result);
 long parse_time(const char *time_str);
 
-char* generate_random_string(int length);
-char *sign(char *nonce, char *signVersion, char *accessKey, char *secretKey, char *ts, char *body);
+void generate_random_string(int length, char* random_string);
+void sign(char *nonce, char *signVersion, char *accessKey, char *secretKey, char *ts, char *body, char *sign_str) ;
 
 #endif //NETWORK_TRAFFIC_NTC_H

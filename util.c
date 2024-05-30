@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <printf.h>
 #include "ntc.h"
+#include "log.h"
 
 const char *suffix[] = {"B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
 
@@ -65,21 +66,22 @@ long parse_time(const char *time_str) {
     return total_seconds;
 }
 
-char* generate_random_string(int length) {
-    if (length <= 0) return NULL;
+void generate_random_string(int length, char* random_string) {
+    if (length <= 0) return;
 
     const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     const int charset_size = sizeof(charset) - 1;
 
     srand(time(NULL));
 
-    char* random_string = (char*)malloc((length + 1) * sizeof(char));
-    if (!random_string) return NULL;
+    random_string = realloc(random_string, (length + 1) * sizeof(char));
+    if (random_string == NULL) {
+        log_warn("Realloc mem failed");
+        return;
+    }
 
     for (int i = 0; i < length; ++i) {
         random_string[i] = charset[rand() % charset_size];
     }
     random_string[length] = '\0';
-
-    return random_string;
 }

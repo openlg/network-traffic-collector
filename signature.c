@@ -14,7 +14,7 @@ void compute_hmac_sha1(const char *key, const char *data, unsigned char *hmac_re
          (unsigned char*)data, strlen(data), hmac_result, &len);
 }
 
-char *base64_encode(const char *input, int length) {
+void base64_encode(unsigned char input[EVP_MAX_MD_SIZE], int length, char *base64text) {
     BIO *bio, *b64;
     BUF_MEM *bufferPtr;
 
@@ -29,24 +29,23 @@ char *base64_encode(const char *input, int length) {
     BIO_get_mem_ptr(bio, &bufferPtr);
     BIO_set_close(bio, BIO_NOCLOSE);
 
-    char *b64text = (char *)malloc((bufferPtr->length + 1) * sizeof(char));
-    memcpy(b64text, bufferPtr->data, bufferPtr->length);
-    b64text[bufferPtr->length] = '\0';
+    base64text = realloc(base64text, (bufferPtr->length + 1) * sizeof(char));
+    memcpy(base64text, bufferPtr->data, bufferPtr->length);
+    base64text[bufferPtr->length] = '\0';
 
+    BUF_MEM_free(bufferPtr);
     BIO_free_all(bio);
-
-    return b64text;
 }
 
-char *sign(char *nonce, char *signVersion, char *accessKey, char *secretKey, char *ts, char *body) {
+void sign(char *nonce, char *signVersion, char *accessKey, char *secretKey, char *ts, char *body, char *sign_str) {
     char stringToSign[strlen(nonce) + strlen(signVersion) + strlen(accessKey) + strlen(body) + 40];
     sprintf(stringToSign, "POST:accessKey=%s&nonce=%s&signVersion=%s&ts=%s:%s",
             accessKey, nonce, signVersion, ts, body);
-    unsigned char hmac_sha1[EVP_MAX_MD_SIZE];
-    memset(hmac_sha1, 0, sizeof(hmac_sha1));
+    unsigned char *hmac_sha1 = (unsigned char *) malloc(EVP_MAX_MD_SIZE);
+    memset(hmac_sha1, 0, EVP_MAX_MD_SIZE);
     compute_hmac_sha1(secretKey, stringToSign, hmac_sha1);
-
-    char *encoded_text = base64_encode(hmac_sha1, strlen(hmac_sha1));
-    return encoded_text;
+    size_t len = strlen(hmac_sha1);
+    base64_encode(hmac_sha1, (int) len, sign_str);
+    free(hmac_sha1);
 }
 
