@@ -11,6 +11,9 @@
 
 const char *suffix[] = {"B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
 
+const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+const int charset_size = sizeof(charset) - 1;
+
 char *xstrdup(const char *s) {
     char *t;
     t = strdup(s);
@@ -69,13 +72,10 @@ long parse_time(const char *time_str) {
 void generate_random_string(int length, char *random_string) {
     if (length <= 0) return;
 
-    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    const int charset_size = sizeof(charset) - 1;
-
     srand(time(NULL));
 
     for (int i = 0; i < length; ++i) {
         random_string[i] = charset[rand() % charset_size];
     }
-    random_string[length + 1] = '\0';
+	random_string[length] = '\0';
 }
