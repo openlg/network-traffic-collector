@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <printf.h>
+#include <ctype.h>
 #include "ntc.h"
-#include "log.h"
 
 const char *suffix[] = {"B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
 
