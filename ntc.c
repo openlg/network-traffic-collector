@@ -15,13 +15,14 @@
 #include <sys/signal.h>
 #include <signal.h>
 #include <pthread.h>
+#include <curl/curl.h>
+#include <unistd.h>
+#include <stdlib.h>
 #include "options.h"
 #include "ntc.h"
 #include "filter.h"
 #include "log.h"
-#include <curl/curl.h>
-#include <unistd.h>
-#include <stdlib.h>
+#include "signature.h"
 
 /* ethernet address of interface. */
 int have_hw_addr = 0;
@@ -232,7 +233,6 @@ void push_data_loop() {
 
         int enable_sign = options.accessKey != NULL && options.secretKey != NULL;
         char *nonce = (char *)malloc(11 * sizeof(char));
-        char sign_str[50 * sizeof(char)];
 
         for (int i = 0; i < sizeof(if_hw_addr); ++i) {
             sprintf(mac + 3 * i, "%c%02x", i ? ':' : ' ', (unsigned int)if_hw_addr[i]);
@@ -295,7 +295,7 @@ void push_data_loop() {
                 generate_random_string(10, nonce);
                 char ts[14];
                 sprintf(ts, "%ld000", time(NULL));
-                sign(nonce, "1.0", options.accessKey, options.secretKey, ts, request_body, (char *)sign_str);
+                char *sign_str = sign(nonce, "1.0", options.accessKey, options.secretKey, ts, request_body);
 				char *sign_str_ = curl_easy_escape(curl, sign_str, 0);
 				char url[strlen(options.url) + strlen(options.accessKey) + strlen(sign_str_) + 100];
 
@@ -303,6 +303,7 @@ void push_data_loop() {
                         options.url, nonce, ts, options.accessKey, sign_str_);
                 curl_easy_setopt(curl, CURLOPT_URL, url);
                 log_info("Send to %s", url);
+				free(sign_str);
 				free(sign_str_);
             } else {
                 curl_easy_setopt(curl, CURLOPT_URL, options.url);

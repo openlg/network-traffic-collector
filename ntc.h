@@ -3,8 +3,8 @@
 // Created by Leon on 2024/5/23.
 //
 
-#ifndef NETWORK_TRAFFIC_NTC_H
-#define NETWORK_TRAFFIC_NTC_H
+#ifndef NETWORK_TRAFFIC_COLLECTOR_NTC_H
+#define NETWORK_TRAFFIC_COLLECTOR_NTC_H
 
 #include <time.h>
 #include <netinet/in.h>
@@ -42,6 +42,5 @@ long parse_time(const char *time_str);
 
 void generate_random_string(int length, char* random_string);
 int contains(const char *haystack, const char *needle);
-void sign(char *nonce, char *signVersion, char *accessKey, char *secretKey, char *ts, char *body, char *sign_str) ;
 
-#endif //NETWORK_TRAFFIC_NTC_H
+#endif //NETWORK_TRAFFIC_COLLECTOR_NTC_H

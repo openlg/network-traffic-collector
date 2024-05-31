@@ -4,7 +4,10 @@
 #include <stdio.h>
 #include <assert.h>
 #include <regex.h>
+#include <stdlib.h>
+#include <string.h>
 #include "filter.h"
+#include "signature.h"
 
 
 int match_regex(const char *pattern, const char *text) {
@@ -67,8 +70,24 @@ void test_filter() {
     assert(filter_by_addr("192.168.1.1") == 0);
 }
 
+void test_hmac_sha1() {
+    char text[] = "POST:accessKey=IBkjcVhwHQfKUX9aezvr5bFmgVKZSxfX&nonce=umo2Fjc81i&signVersion=1.0&ts=1717140010000:{\"metadata\":{\"interface\": \"en0\", \"hostname\": \"leon-pc.local\", \"process_id\": \"\", \"version\": \"\", \"mac\": \"14:7d:da:2a:e8:c1\", \"ip\": \"192.168.1.66\", \"ipv6\": \"::\" },\"transmit\": 43964.000000, \"received\": 50535.000000, \"start\": 1717139994, \"end\": 1717140010 }";
+    char key[] = "yWErSN7alUa8KhjXIWoPxcNqLubStQlp";
+    unsigned int sha1_len = 0;
+    unsigned char *sha1 = compute_hmac_sha1(key, text, &sha1_len);
+
+    for (int i = 0; i < sha1_len; ++i) {
+        printf("%hx", sha1[i]);
+    }
+
+    char *base64 = base64_encode(sha1, strlen(sha1));
+    printf("\n%s", base64);
+
+    free(sha1);
+}
+
 int main(int argc, char **argv) {
     test_regex_match();
-
     test_filter();
+    test_hmac_sha1();
 }
