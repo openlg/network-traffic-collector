@@ -232,7 +232,7 @@ void push_data_loop() {
 
         int enable_sign = options.accessKey != NULL && options.secretKey != NULL;
         char *nonce = (char *)malloc(11 * sizeof(char));
-        char sign_str[50];
+        char sign_str[100];
 
         for (int i = 0; i < sizeof(if_hw_addr); ++i) {
             sprintf(mac + 3 * i, "%c%02x", i ? ':' : ' ', (unsigned int)if_hw_addr[i]);
