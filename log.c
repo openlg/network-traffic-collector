@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <time.h>
 #include "log.h"
+#include "options.h"
+
+extern options_t options;
 
 void log_(char level,const char *format, va_list args) {
     char datetime[80];
@@ -17,6 +20,9 @@ void log_(char level,const char *format, va_list args) {
     fflush(stdout);
 }
 void log_debug(const char *msg, ...){
+    if (!options.debug) {
+        return;
+    }
     va_list args;
     va_start(args, msg);
     log_('D', msg, args);

@@ -76,6 +76,8 @@ void options_set_defaults() {
     if (options.secretKey == NULL)
         options.secretKey = getenv("secretKey");
     options.debug = 0;
+    options.port = 8010;
+    options.buffer_size = 1024;
 
 #ifdef NEED_PROMISCUOUS_FOR_OUTGOING
     options.promiscuous = 1;
@@ -120,7 +122,7 @@ void options_read_args(int argc, char **argv) {
     int opt;
 
     opterr = 0;
-    char opt_str[] = "hi:s:I:f:A:S:d";
+    char opt_str[] = "hi:s:I:f:A:S:dp:";
     while ((opt = getopt(argc, argv, opt_str)) != -1) {
         switch (opt) {
             case 'h':
@@ -146,6 +148,9 @@ void options_read_args(int argc, char **argv) {
                 break;
             case 'd':
                 options.debug = 1;
+                break;
+            case 'p':
+                options.port = atoi(optarg);
                 break;
             case '?':
                 fprintf(stderr, "ntc: unknown option -%c\n", optopt);

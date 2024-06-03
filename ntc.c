@@ -23,6 +23,7 @@
 #include "filter.h"
 #include "log.h"
 #include "signature.h"
+#include "server.h"
 
 /* ethernet address of interface. */
 int have_hw_addr = 0;
@@ -55,7 +56,7 @@ void ntc_init() {
     log_info("Compiled %d regular expressions to filter packet.", count);
 }
 
-void packet_init() {
+int packet_init() {
     char error_buf[PCAP_ERRBUF_SIZE];
     int result;
 
@@ -63,7 +64,7 @@ void packet_init() {
                              &if_ip_addr, &if_ip6_addr);
 
     if (result < 0) {
-        exit(EXIT_FAILURE);
+        return 0;
     }
     have_hw_addr = result & 0x01;
     have_ip_addr = result & 0x02;
@@ -91,9 +92,16 @@ void packet_init() {
 
     if(pd == NULL) {
         log_error("pcap_open_live(%s): %s", options.interface, error_buf);
-        exit(EXIT_FAILURE);
+        return 0;
     }
+    return 1;
+}
 
+void stop_packet() {
+    if (pd != NULL) {
+        pcap_close(pd);
+    }
+    log_info("Packet capture stopped.");
 }
 
 void ether_addr_to_string(struct ether_addr *addr, char *str) {
@@ -350,6 +358,7 @@ static void finish(int sig) {
 void ntc_destroy() {
     if (pd != NULL) {
         pcap_close(pd);
+        log_info("Packet capture stopped.");
     }
     curl_global_cleanup();
 
@@ -377,22 +386,35 @@ int main(int argc, char **argv) {
 
     ntc_init();
 
-    packet_init();
-
-    pthread_t thread;
-    pthread_mutex_init(&tick_mutex, NULL);
-    int result = pthread_create(&thread, NULL, (void*)&packet_loop, NULL);
+    pthread_t server_thread;
+    int result = pthread_create(&server_thread, NULL, (void*)&start, NULL);
     if (result != 0) {
-        log_error("Error creating thread");
+        log_error("Error creating server thread");
         return 1;
     }
-    thread_status = THREAD_RUNNING;
 
-    push_data_loop();
-    //pthread_join(thread, NULL);
+    result = packet_init();
 
-    pthread_cancel(thread);
+    if (result) {
+        pthread_t thread;
+        pthread_mutex_init(&tick_mutex, NULL);
+        result = pthread_create(&thread, NULL, (void*)&packet_loop, NULL);
+        if (result != 0) {
+            log_error("Error creating thread");
+        } else {
+            thread_status = THREAD_RUNNING;
+            push_data_loop();
+        }
+        pthread_cancel(thread);
+        //pthread_join(thread, NULL);
+    }
+
+    log_info("Stopping ntc...");
+    stop();
+    sleep(1);
+    pthread_cancel(server_thread);
 
     ntc_destroy();
+    log_info("Ntc is stopped.");
 	return 0;
 }
