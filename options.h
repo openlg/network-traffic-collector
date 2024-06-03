@@ -21,6 +21,9 @@ typedef struct {
 
     int debug;
 
+    int port;
+    int buffer_size;
+
 } options_t;
 
 void options_set_defaults() ;
