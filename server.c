@@ -110,8 +110,8 @@ void handle_client(int client_socket) {
     readable_size(metrics.total_recv, recv_str);
 
     sprintf(html_content, "{"
-                            "code: \"ok\","
-                            "data: {"
+                            "\"code\": \"ok\","
+                            "\"data\": {"
                                 "\"last_capture_time\": \"%s\","
                                 "\"transmit\": \"%s\","
                                 "\"received\": \"%s\","
