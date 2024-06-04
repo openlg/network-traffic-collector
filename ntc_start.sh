@@ -19,7 +19,7 @@ if [ ! -x "$NTC" ]; then
   chmod +x "$NTC"
 fi
 
-/opt/ntc -s https://cloud.tapdata.net/api/tcm/agent/network_traffic >> /opt/ntc.log 2>&1 &
+/opt/ntc -s https://cloud.tapdata.net/api/tcm/agent/network_traffic "$@" >> /opt/ntc.log 2>&1 &
 
 pid=$(ps aux | grep '/opt/ntc' | grep -v grep | awk '{print $2}')
 echo "ntc started, pid is $pid"

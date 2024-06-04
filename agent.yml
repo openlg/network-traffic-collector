@@ -57,7 +57,8 @@ spec:
           value: vdOxdhRHaDIoHqyqEDJ3b49aARnMBIwT
         - name: singletonLock
           value: 665d7b6464c4b4792eaa666c
-        image: asia-docker.pkg.dev/crypto-reality-377106/tapdata/dfs-flow-engine:v3.7.0-665ae5eb
+        #image: asia-docker.pkg.dev/crypto-reality-377106/tapdata/dfs-flow-engine:v3.7.0-665ae5eb
+        image: tapdata-docker.pkg.coding.net/dfs/flow-engine/base:0.3
         imagePullPolicy: IfNotPresent
         name: agent
         resources:
