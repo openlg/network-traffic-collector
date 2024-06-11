@@ -267,7 +267,7 @@ void push_data_loop() {
         while (thread_status != THREAD_FINISHED && sigAtomic == 0) {
             sleep(options.interval);
             now = time(NULL);
-            end = metrics.ts;
+            end = now; //metrics.ts;
             send_bytes = metrics.total_sent;
             recv_bytes = metrics.total_recv;
 
