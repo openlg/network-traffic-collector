@@ -113,7 +113,7 @@ void usage(FILE *fp) {
 "   -S secretKey        Specify the secret key used for signing, default get from env 'secretKey'\n"
 "   -d                  Output debug log, This will output all captured packet header information, use with caution\n"
 "\n"
-"ntc, version v1.1.1\n"
+"ntc, version v1.1.2\n"
 "copyright (c) 2024 Leon Li <leon@tapdata.io>\n"
     );
 }
