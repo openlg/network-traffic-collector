@@ -8,8 +8,8 @@
 #include <printf.h>
 #include <ctype.h>
 #include <unistd.h>
-#include "ntc.h"
 #include "util.h"
+#include <time.h>
 
 const char *suffix[] = {"B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
 
@@ -87,17 +87,39 @@ int contains(const char *haystack, const char *needle) {
 }
 
 #ifdef __linux__
-#include <sys/sysinfo.h>
+#define BUFFER_SIZE 1024
+
+void read_line(FILE *fp, char *buffer, int size) {
+    if (fgets(buffer, size, fp) == NULL) {
+        perror("fgets failed");
+    }
+    buffer[strcspn(buffer, "\n")] = '\0';
+}
+
 Meter get_memory_meter_linux() {
-    struct sysinfo info;
     Meter meter = {0, 0, 0};
 
-    if (sysinfo(&info) == 0) {
-		meter.total = (long)info.totalram * info.mem_unit;
-		meter.used = ((long)meter.total - (long)info.freeram) * info.mem_unit;
-		meter.usage = (double)meter.used / (double)meter.total;
-		return meter;
+    FILE *fp;
+    char buffer[BUFFER_SIZE];
+    long total_memory, free_memory, available_memory;
+
+    fp = fopen("/proc/meminfo", "r");
+    if (fp == NULL) {
+        return meter;
     }
+
+    read_line(fp, buffer, BUFFER_SIZE);
+    sscanf(buffer, "MemTotal: %ld kB", &total_memory);
+    read_line(fp, buffer, BUFFER_SIZE);
+    sscanf(buffer, "MemFree: %ld kB", &free_memory);
+    read_line(fp, buffer, BUFFER_SIZE);
+    sscanf(buffer, "MemAvailable: %ld kB", &available_memory);
+
+    fclose(fp);
+
+    meter.total = total_memory * 1024;
+    meter.used = (total_memory - available_memory) * 1024;
+    meter.usage = (double)meter.used/(double)meter.total;
 
     return meter;
 }
@@ -151,6 +173,7 @@ double get_cpu_used_linux() {
 #include <sys/sysctl.h>
 #include <mach/vm_statistics.h>
 #include <mach/mach.h>
+#include <libc.h>
 
 Meter get_memory_meter_macos() {
     Meter meter = {0, 0, 0};

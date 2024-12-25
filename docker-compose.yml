@@ -1,0 +1,10 @@
+version: "3.3"
+services:
+  build:
+    image: ubuntu:latest
+    volumes:
+      - "./:/ntc"
+    command:
+      - bash
+      - "/ntc/setup.sh"
+
