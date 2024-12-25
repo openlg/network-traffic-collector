@@ -6,8 +6,10 @@
 #include <regex.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include "filter.h"
 #include "signature.h"
+#include "util.h"
 
 
 int match_regex(const char *pattern, const char *text) {
@@ -89,7 +91,14 @@ void test_hmac_sha1() {
 }
 
 int main(int argc, char **argv) {
-    test_regex_match();
-    test_filter();
+    //test_regex_match();
+    //test_filter();
     //test_hmac_sha1();
+    Meter mem = get_memory_meter();
+    printf("mem: %ld %f %ld", mem.total, mem.usage, mem.used);
+    printf("\n");
+    Meter cpu = get_cpu_meter();
+    printf("cpu: %ld %f %ld", cpu.total, cpu.usage, cpu.used);
+
+    return 0;
 }

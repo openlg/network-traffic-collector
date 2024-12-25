@@ -12,7 +12,7 @@
 
 #include "options.h"
 #include "net/if.h"
-#include "ntc.h"
+#include "util.h"
 
 options_t options;
 

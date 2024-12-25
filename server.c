@@ -11,6 +11,7 @@
 #include "options.h"
 #include "log.h"
 #include "ntc.h"
+#include "util.h"
 
 extern options_t options;
 extern Metrics metrics;

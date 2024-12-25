@@ -24,6 +24,7 @@
 #include "log.h"
 #include "signature.h"
 #include "server.h"
+#include "util.h"
 
 /* ethernet address of interface. */
 int have_hw_addr = 0;
@@ -279,23 +280,31 @@ void push_data_loop() {
             if (gethostname(hostname, sizeof(hostname)) != 0) {
                 strcpy(hostname, getenv("HOSTNAME"));
             }
+
+            Meter cpu = get_cpu_meter();
+            Meter mem = get_memory_meter();
+
             sprintf(request_body, "{"
                                   "\"metadata\":{"
                                       "\"interface\": \"%s\", "
                                       "\"hostname\": \"%s\", "
                                       "\"process_id\": \"%s\", "
                                       "\"version\": \"%s\", "
+                                      "\"cpu_core\": \"%ld\", "
+                                      "\"memory\": \"%ld\", "
                                       "\"mac\": \"%s\", "
                                       "\"ip\": \"%s\", "
                                       "\"ipv6\": \"%s\" "
                                   "},"
                                   "\"transmit\": %Lf, "
                                   "\"received\": %Lf, "
+                                  "\"cpuUsage\": %f, "
+                                  "\"memUsage\": %f, "
                                   "\"start\": %ld, "
                                   "\"end\": %ld "
                                   "}",
-                    options.interface, hostname, process_id, version, mac, inet_ntoa(if_ip_addr),
-                    ip6str, send_bytes, recv_bytes, start, end);
+                    options.interface, hostname, process_id, version, cpu.total, mem.total, mac, inet_ntoa(if_ip_addr),
+                    ip6str, send_bytes, recv_bytes, cpu.usage, mem.usage, start, end);
 
             log_info("Total send %s, total receive %s, send data %s", send_str, recv_str, request_body);
 

@@ -9,10 +9,20 @@ find_package(Threads REQUIRED)
 find_package(OpenSSL REQUIRED)
 include_directories(${OPENSSL_INCLUDE_DIR})
 
-add_executable(ntc ntc.h ntc.c options.h options.c util.c addrs_ioctl.c filter.c filter.h log.c log.h signature.c signature.h server.c server.h)
+add_executable(ntc ntc.h ntc.c options.h options.c
+        util.h util.c addrs_ioctl.c
+        filter.c filter.h
+        log.c log.h
+        signature.c signature.h
+        server.c server.h)
 target_link_libraries(ntc ${PCAP_LIBRARY} CURL::libcurl ${CMAKE_THREAD_LIBS_INIT} ${OPENSSL_LIBRARIES})
 
-add_executable(ntc_test ntc.h options.h options.c test.c util.c filter.h filter.c log.c log.h signature.c signature.h)
+add_executable(ntc_test ntc.h
+        options.h options.c test.c
+        util.h util.c
+        filter.h filter.c
+        log.c log.h
+        signature.c signature.h)
 target_link_libraries(ntc_test ${OPENSSL_LIBRARIES})
 enable_testing()
 add_test(NAME ntc_test COMMAND ntc_test)
