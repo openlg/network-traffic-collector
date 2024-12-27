@@ -42,7 +42,7 @@ char* base64_encode(unsigned char *input, unsigned int length) {
 }
 
 char* sign(char *nonce, char *signVersion, char *accessKey, char *secretKey, char *ts, char *body) {
-    char stringToSign[strlen(nonce) + strlen(signVersion) + strlen(accessKey) + strlen(body) + 40];
+    char stringToSign[strlen(nonce) + strlen(signVersion) + strlen(accessKey) + strlen(body) + 100];
     sprintf(stringToSign, "POST:accessKey=%s&nonce=%s&signVersion=%s&ts=%s:%s",
             accessKey, nonce, signVersion, ts, body);
 

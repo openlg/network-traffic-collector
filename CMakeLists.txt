@@ -3,7 +3,7 @@ project(network_traffic_collector C)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -s")
-set(CMAKE_BUILD_TYPE "RELEASE")
+set(CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}")
 set(CMAKE_STRIP "strip")
 
 include(FindPCAP.cmake)

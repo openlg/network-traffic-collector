@@ -314,7 +314,7 @@ void push_data_loop() {
                 sprintf(ts, "%ld000", time(NULL));
                 char *sign_str = sign(nonce, "1.0", options.accessKey, options.secretKey, ts, request_body);
 				char *sign_str_ = curl_easy_escape(curl, sign_str, 0);
-				char url[strlen(options.url) + strlen(options.accessKey) + strlen(sign_str_) + 100];
+				char url[strlen(options.url) + strlen(nonce) + strlen(ts) + strlen(options.accessKey) + strlen(sign_str_) + 100];
 
                 sprintf(url, "%s?nonce=%s&ts=%s&accessKey=%s&sign=%s&signVersion=1.0",
                         options.url, nonce, ts, options.accessKey, sign_str_);
@@ -351,9 +351,14 @@ void push_data_loop() {
                     log_error("Send failed: %d %s\n", response.headers.status_code, response.data);
                 }
             }
+            free(response.headers.content_type);
+            response.headers.content_type = NULL;
             response.size = 0;
         }
+        free(response.data);
+        curl_slist_free_all(headers);
         curl_easy_cleanup( curl );
+        free(nonce);
     }
 }
 
@@ -415,13 +420,14 @@ int main(int argc, char **argv) {
             push_data_loop();
         }
         pthread_cancel(thread);
-        //pthread_join(thread, NULL);
+        pthread_join(thread, NULL);
     }
 
     log_info("Stopping ntc...");
     stop();
     sleep(1);
     pthread_cancel(server_thread);
+    pthread_join(server_thread, NULL);
 
     ntc_destroy();
     log_info("Ntc is stopped.");
