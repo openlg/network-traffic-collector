@@ -21,6 +21,8 @@ int init_filter(const char *filter) {
         for (int i = 0; i < total_len; ++i) {
             if (filter_copy[i] == delim) {
                 pattern_count++;
+            } else if (i == total_len - 1) {
+                pattern_count++;
             }
         }
 
